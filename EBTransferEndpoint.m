@@ -21,5 +21,6 @@
 %-------------------------------------------------------------------%
 function phaseout = EBTransferEndpoint(input)
 xf = input.phase(1).finalstate;
+tf = input.phase(1).finaltime;
 phaseout.objective = -xf(7);
 end

@@ -14,11 +14,12 @@
 %   Time: year                                                      %
 %   Mass: % of m0                                                   %
 % Target: 317 Roxane                                                %
-% Rocket: CZ-9, 2023.4                                              %
-%   Take-off Weight: 4400t                                          %
+% Explorer: Tianwen                                                 %
+%   Take-off Weight: 8.2t                                           %
 % Hall Thruster: single channel HET-450                             %
 %   Power level: 105kW                                              %
 %   Maximum thrust: 4.6N                                            %
+%   Isp: 5100s                                                      %
 % Departure: 2035-12-06 20:00:00                                    %
 % Arrival: 2041-12-06 20:00:00                                      %  
 %-------------------------------------------------------------------%
@@ -26,29 +27,29 @@ clc;clear
 %-------------------------------------------------------------------%
 %---------------------------- Constant -----------------------------%
 %-------------------------------------------------------------------%
-m0 = 4.4e6;
-mf = 0.0 * m0;
+m0 = 1e5;
+mf = 0.8 * m0;
 day2sec = 86400;
 muSun = 1.32712440018e20;
 au = 1.49597871e11;
-Isp = 8000;
+Isp = 5100;
 g0 = 9.8;
-Tmax = 4600;
-epoch_jd = juliandate(datetime("2021-07-01 12:00:00"));                                           
+Tmax = 4.6;
+epoch_jd = juliandate(datetime("2024-10-17 12:00:00"));                                           
 epoch0_jd = juliandate(datetime("2000-01-01 12:00:00"));
 
 % Orbit Element 
 % Epoch - 2021-07-01
 % Epoch0 - 2000-01-01
-aAsteroid = 3.4211e11;
-eAsteroid = 0.0851421;
-iAsteroid = deg2rad(1.7660);
-OmegaAsteroid = deg2rad(151.34);
-omegaAsteroid = deg2rad(187.05);
-MAsteroid_epoch =deg2rad(324.5763812512884);
+aAsteroid = 2.285935641764321 * au;
+eAsteroid = 0.08612238557068606;
+iAsteroid = deg2rad(1.7661971878337);
+OmegaAsteroid = deg2rad(151.3313474259361);
+omegaAsteroid = deg2rad(186.7199711143541);
+MAsteroid_epoch =deg2rad(174.6697087342658);
 fAsteroid_epoch = E2f(M2E(MAsteroid_epoch, eAsteroid), eAsteroid);
 
-aEarth = 1.5 * au;
+aEarth = au;
 eEarth = 0.0167086;
 iEarth = deg2rad(1.578690);
 OmegaEarth = deg2rad(174.9);
@@ -63,21 +64,21 @@ fEarth_epoch0 = E2f(M2E(MEarth_epoch0, eEarth), eEarth);
 %----------------- Initial and Final Conditions --------------------%
 %-------------------------------------------------------------------%
 % Initial and final time
-t0_datetime = datetime("2035-12-06 20:00:00");
+t0_datetime = datetime("2035-12-10 20:00:00");
 t0_jd = juliandate(t0_datetime);
 t0 = t0_jd * day2sec;
 
-tf_datetime = datetime("2045-12-06 20:00:00");
+tf_datetime = datetime("2049-12-10 20:00:00");
 tf_jd = juliandate(tf_datetime);
 tf = tf_jd * day2sec;
 
 % Initial state and final state
-dt_epoch_f = (tf_jd - epoch_jd) * day2sec;
+dt_epoch_f = (tf_jd - epoch0_jd) * day2sec;
 fAsteroid_tf = mod(f0dt2ft(fAsteroid_epoch, dt_epoch_f, aAsteroid, eAsteroid, muSun), 2*pi);
 coe_tf = [aAsteroid; eAsteroid; iAsteroid; OmegaAsteroid; omegaAsteroid; fAsteroid_tf];
 [Rf, Vf] = coe2rv(coe_tf, muSun);
 
-dt_epoch0_0 = (t0_jd - epoch0_jd) * day2sec;
+dt_epoch0_0 = (t0_jd - epoch_jd) * day2sec;
 fEarth_t0 = mod(f0dt2ft(fEarth_epoch0, dt_epoch0_0, aEarth, eEarth, muSun), 2*pi);
 coe_t0 = [aEarth; eEarth; iEarth; OmegaEarth; omegaEarth; fEarth_t0];
 [R0, V0] = coe2rv(coe_t0, muSun);
@@ -106,9 +107,9 @@ g0 = g0 / aUnit;
 Tmax = Tmax / FUnit;
 
 % Bounds
-rmax = 3;
+rmax = 5;
 rmin = -rmax;
-vmax = 5e5 / vUnit;
+vmax = 1e5 / vUnit;
 vmin = -vmax;
 
 % Initial and final state/time
@@ -159,10 +160,10 @@ guess.phase(iphase).time = (0:(tf-t0)/(guessNode-1):tf-t0)';
 %------------------------------- Bounds ----------------------------%
 %-------------------------------------------------------------------%
 % Time bounds
-bounds.phase(iphase).initialtime.lower = t0;
-bounds.phase(iphase).initialtime.upper = t0;
-bounds.phase(iphase).finaltime.lower = t0;
-bounds.phase(iphase).finaltime.upper = tf;
+bounds.phase(iphase).initialtime.lower = 0;
+bounds.phase(iphase).initialtime.upper = 0;
+bounds.phase(iphase).finaltime.lower = 0;
+bounds.phase(iphase).finaltime.upper = tf-t0;
 
 % State bounds
 bounds.phase(iphase).initialstate.lower = x0;
@@ -185,11 +186,11 @@ bounds.phase(iphase).path.upper = 1;
 %-------------------------------- Mesh -----------------------------%
 %-------------------------------------------------------------------%
 mesh.method = 'hp1';
-mesh.tolerance = 1e-9; 
+mesh.tolerance = 1e-11; 
 mesh.maxiteration = 10000;
 mesh.colpointmin = 4;
 mesh.colpointmax = 50;
-mesh.phase.colpoints = 1000*ones(1,10);
+mesh.phase.colpoints = 10*ones(1,10);
 mesh.phase.fraction = 100*ones(1,10);
 
 
@@ -202,7 +203,6 @@ setup.functions.endpoint=@EBTransferEndpoint;
 setup.auxdata=auxdata;
 setup.bounds=bounds;
 setup.guess=guess;
-setup.tolerance = 1e-8;
 
 
 %-------------------------------------------------------------------%
@@ -219,13 +219,23 @@ r = solution.phase.state(:, 1:3);
 figure
 plot3(r(:, 1), r(:, 2), r(:, 3), 'LineWidth', 1.5); hold on
 plot3(0, 0, 0, 'k*', 'LineWidth', 3);hold on
-plot3(guess.phase.state(:, 1), guess.phase.state(:, 2), guess.phase.state(:, 3));
+plot3(r(1, 1), r(1, 2), r(1, 3), 'g*', 'LineWidth', 3);hold on
+text(r(1, 1), r(1, 2), r(1, 3), 'Departure - Earth');hold on
+plot3(r(end, 1), r(end, 2), r(end, 3), 'r*', 'LineWidth', 3);hold on
+text(r(end, 1), r(end, 2), r(end, 3), 'Arrival - Roxane');
+xlabel('x(AU)')
+ylabel('y(AU)')
+zlabel('z(AU)')
+title('Roxane-Earth Low Thrust Trajectory');
 axis equal
 
 u = solution.phase.control;
 unorm = sqrt(u(:, 1).^ 2 + u(:, 2).^2 + u(:, 3).^2);
 figure
 plot(t, unorm, 'LineWidth', 1.5);
+xlabel('t(Year)')
+ylabel('u')
+title('Amplitude of Thrust - Normalized')
 
 
 
